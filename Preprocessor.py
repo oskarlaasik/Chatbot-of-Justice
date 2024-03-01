@@ -2,12 +2,14 @@ import re
 
 import nltk
 from torch import clamp, sum
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, AutoModel
 
 
 class Preprocessor:
-    def __init__(self, model):
-        self.tokenizer = AutoTokenizer.from_pretrained(model)
+    def __init__(self, model_name):
+        self.model_name = model_name
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModel.from_pretrained(model_name)
 
     def chunk_examples(self, batch):
         chunks = []
@@ -23,15 +25,15 @@ class Preprocessor:
             ids.extend([batch['ID'][i]] * len(sentences))
         return {'chunks': chunks, 'id': ids}
 
-    def tokenize(self, batch):
-        results = self.tokenizer(batch['chunks'], add_special_tokens=True, truncation=True, padding="max_length",
+    def tokenize(self, batch, column_name):
+        results = self.tokenizer(batch[column_name], add_special_tokens=True, truncation=True, padding="max_length",
                                  return_attention_mask=True, return_tensors="pt")
         batch['input_ids'] = results['input_ids']
         batch['token_type_ids'] = results['token_type_ids']
         batch['attention_mask'] = results['attention_mask']
         return batch
 
-    def embed_question(self, batch, embedding_name):
+    def embed(self, batch, embedding_name):
         sentence_embs = self.model(
             input_ids=batch['input_ids'],
             token_type_ids=batch['token_type_ids'],
