@@ -6,31 +6,35 @@ from conf import settings
 
 
 class SemanticHasher:
-    def __init__(self, collection_name):
-        self.collection = self.create_collection(collection_name)
+    def __init__(self, model_name, dimension):
+        # collection name can only contain numbers, letters and underscores
+        collection_name = model_name.replace('-', '_')
+        self.collection = self.create_collection(collection_name, dimension)
+        self.preprocessor = Preprocessor(model_name)
 
     def insert_function(self, batch):
-        insertable = [
-            batch['id'].tolist(),
-            batch['chunks'],
-            batch['facts_embedding'].tolist()
+        embeds = self.preprocessor.embed(batch['chunked_facts'])
+        ins = [
+            batch['id'],
+            batch['chunked_facts'],
+            [x for x in embeds]
         ]
-        self.collection.insert(insertable)
+        self.collection.insert(ins)
 
-    def create_collection(self, collection_name):
+    def create_collection(self, collection_name, model_dimension):
         if utility.has_collection(collection_name):
             utility.drop_collection(collection_name)
 
         index_params = {
-            'metric_type': 'IP',
+            'metric_type': 'L2',
             'index_type': "IVF_FLAT",
-            'params': {"nlist": 1536}
+            'params': {"nlist": 2048, 'nprobe': 128}
         }
 
         fields = [
             FieldSchema(name='id', dtype=DataType.INT64, is_primary=True),
-            FieldSchema(name='chunks', dtype=DataType.VARCHAR, max_length=settings.TOKENIZATION_BATCH_SIZE),
-            FieldSchema(name='facts_embedding', dtype=DataType.FLOAT_VECTOR, dim=settings.DIMENSION)
+            FieldSchema(name='chunked_facts', dtype=DataType.VARCHAR, max_length=settings.TOKENIZATION_BATCH_SIZE),
+            FieldSchema(name='facts_embedding', dtype=DataType.FLOAT_VECTOR, dim=model_dimension)
         ]
         schema = CollectionSchema(fields=fields)
         collection = Collection(name=collection_name, schema=schema)
@@ -40,22 +44,11 @@ class SemanticHasher:
         return collection
 
     def hash_collection(self, model_name):
-        preprocessor = Preprocessor(model_name)
         print('loading dataset from csv')
         dataset = load_dataset("csv", data_files='data/justice.csv', split='all')
         print('chunking')
-        dataset = dataset.map(preprocessor.chunk_examples, batch_size=16, batched=True,
+        dataset = dataset.map(self.preprocessor.chunk_examples, batch_size=16, batched=True,
                               remove_columns=dataset.column_names)
-        print('tokenizing')
-        dataset = dataset.map(preprocessor.tokenize, batch_size=settings.TOKENIZATION_BATCH_SIZE, batched=True,
-                              fn_kwargs={'column_name': 'chunks'})
-        print('calculating embeddings')
-        dataset.set_format('torch', columns=['input_ids', 'token_type_ids', 'attention_mask'],
-                           output_all_columns=True)
-        dataset = dataset.map(preprocessor.embed, remove_columns=['input_ids', 'token_type_ids', 'attention_mask'],
-                              batched=True,
-                              batch_size=settings.INFERENCE_BATCH_SIZE,
-                              fn_kwargs={'embedding_name': 'facts_embedding'})
-        print('loading data to vector database')
-        dataset.map(self.insert_function, batched=True, batch_size=64)
+        print('calculating embeddings and inserting to database')
+        dataset.map(self.insert_function, batched=True, batch_size=32)
         self.collection.flush()

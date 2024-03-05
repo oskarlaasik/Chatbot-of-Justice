@@ -2,16 +2,23 @@ from milvus import default_server
 from pymilvus import connections
 
 from SemanticHasher import SemanticHasher
+from conf import settings
+
 
 default_server.set_base_dir('test_milvus')
-#if default_server.running is False:
-#    default_server.start()
 
-# Now you could connect with localhost and the given port
-# Port is defined by default_server.listen_port
-connections.connect(host='127.0.0.1', port=default_server.listen_port)
+# In case server is running, it is quicker to try to connect
+# and in case of failure start server, server startup hangs for 3 min
+try:
+    connections.connect(host='127.0.0.1', port=default_server.listen_port)
+except:
+    default_server.start()
+    connections.connect(host='127.0.0.1', port=default_server.listen_port)
 
-sem_hasher = SemanticHasher('bert_base_uncased')
-sem_hasher.hash_collection('bert-base-uncased')
+
+for i in range(len(settings.models_to_test)):
+    print(settings.models_to_test[i])
+    sem_hasher = SemanticHasher(settings.models_to_test[i], settings.corresponding_model_dim[i])
+    sem_hasher.hash_collection(settings.models_to_test[i])
 
 default_server.stop()

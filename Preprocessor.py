@@ -1,45 +1,30 @@
+import pickle
 import re
 
-import nltk
-from torch import clamp, sum
-from transformers import AutoTokenizer, AutoModel
+from sentence_transformers import SentenceTransformer
 
 
 class Preprocessor:
     def __init__(self, model_name):
+        with open('data/english.pickle', 'rb') as punkt_file:
+             self.sentence_tokenizer = pickle.load(punkt_file)
         self.model_name = model_name
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModel.from_pretrained(model_name)
+        self.transformer = SentenceTransformer(model_name)
 
     def chunk_examples(self, batch):
         chunks = []
         ids = []
         for i in range(len(batch['facts'])):
             paragraphs = re.split('</p>|<p>', batch['facts'][i].strip())
-            paragraphs = list(filter(lambda name: name.strip(), paragraphs))
+            paragraphs = list(filter(lambda sentence: sentence.strip(), paragraphs))
             sentences = []
             for paragraph in paragraphs:
-                sent_text = nltk.sent_tokenize(paragraph)
+                sent_text = self.sentence_tokenizer.tokenize(paragraph)
                 sentences.extend(sent_text)
             chunks.extend(sentences)
             ids.extend([batch['ID'][i]] * len(sentences))
-        return {'chunks': chunks, 'id': ids}
+        return {'chunked_facts': chunks, 'id': ids}
 
-    def tokenize(self, batch, column_name):
-        results = self.tokenizer(batch[column_name], add_special_tokens=True, truncation=True, padding="max_length",
-                                 return_attention_mask=True, return_tensors="pt")
-        batch['input_ids'] = results['input_ids']
-        batch['token_type_ids'] = results['token_type_ids']
-        batch['attention_mask'] = results['attention_mask']
-        return batch
+    def embed(self, data):
+        return self.transformer.encode(data)
 
-    def embed(self, batch, embedding_name):
-        sentence_embs = self.model(
-            input_ids=batch['input_ids'],
-            token_type_ids=batch['token_type_ids'],
-            attention_mask=batch['attention_mask']
-        )[0]
-        input_mask_expanded = batch['attention_mask'].unsqueeze(-1).expand(sentence_embs.size()).float()
-        batch[embedding_name] = sum(sentence_embs * input_mask_expanded, 1) / clamp(input_mask_expanded.sum(1),
-                                                                                    min=1e-9)
-        return batch
