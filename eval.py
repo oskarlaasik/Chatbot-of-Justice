@@ -1,64 +1,56 @@
+import time
+
 from datasets import load_dataset
-from pymilvus import Collection
 from milvus import default_server
+from pymilvus import Collection
 from pymilvus import connections
+
 from Preprocessor import Preprocessor
 from conf import settings
 
-
 default_server.set_base_dir('test_milvus')
-if default_server.running is False:
+
+# In case server is running, it is quicker to try to connect
+# and in case of failure start server, server startup hangs for 3 min
+try:
+    connections.connect(host='127.0.0.1', port=default_server.listen_port)
+except:
     default_server.start()
+    connections.connect(host='127.0.0.1', port=default_server.listen_port)
 
-# Now you could connect with localhost and the given port
-# Port is defined by default_server.listen_port
-connections.connect(host='127.0.0.1', port=default_server.listen_port)
-
-preprocessor = Preprocessor('bert-base-uncased')
-
+TOP_K = 1
 question_dataset = load_dataset("csv", data_files='data/question_data.csv', split='all')
-question_dataset = question_dataset.map(preprocessor.tokenize, batched=True,
-                                        batch_size=settings.TOKENIZATION_BATCH_SIZE,
-                                        fn_kwargs={'column_name': 'question'})
-question_dataset.set_format('torch', columns=['input_ids', 'token_type_ids', 'attention_mask'], output_all_columns=True)
-question_dataset = question_dataset.map(preprocessor.embed,
-                                        remove_columns=['input_ids', 'token_type_ids', 'attention_mask'],
-                                        batched=True, batch_size=settings.INFERENCE_BATCH_SIZE,
-                                        fn_kwargs={'embedding_name': 'question_embedding'})
 
-collection = Collection("bert_base_uncased")
+search_terms = question_dataset['question']
 
 
-def search(batch):
-    res = collection.search(batch['question_embedding'].tolist(), anns_field='facts_embedding', param={},
-                            output_fields=['chunks'], limit=settings.LIMIT)
-    overall_id = []
-    overall_distance = []
-    overall_answer = []
-    for hits in res:
-        ids = []
-        distance = []
-        answer = []
-        for hit in hits:
-            ids.append(hit.id)
-            distance.append(hit.distance)
-            answer.append(hit.entity.get('chunks'))
-        overall_id.append(ids)
-        overall_distance.append(distance)
-        overall_answer.append(answer)
-    return {
-        'id': overall_id,
-        'distance': overall_distance,
-        'chunks': overall_answer,
-    }
+def print_results(res, duration, modelname):
+    overall_score = 0
+    for hits_i, hits in enumerate(res):
+        if question_dataset[hits_i]['document_id'] == res[hits_i].ids[0]:
+            overall_score += 1
+
+    score = overall_score/len(res)
+    print(modelname + ': ' + str(score))
+    print('time' + ': ' + str(duration))
 
 
-question_dataset = question_dataset.map(search, batched=True, batch_size=1)
+for i in range(len(settings.models_to_test)):
+    print(settings.models_to_test[i])
+    preprocessor = Preprocessor(settings.models_to_test[i])
+    embeds = preprocessor.embed(search_terms)
+    collection = Collection(settings.models_to_test[i].replace('-', '_'))
+    start = time.time()
+    res = collection.search(
+        data=embeds,  # Embeded search value
+        anns_field="facts_embedding",  # Search across embeddings
+        param={},
+        limit=TOP_K,  # Limit to top_k results per search
+        output_fields=['chunked_facts']  # Include title field in result
+    )
+    end = time.time()
 
-for x in question_dataset:
-    print()
-    print('Question:')
-    print(x['question'])
-    print('Answer, Distance')
-    for x in zip(x['chunks'], x['distance']):
-        print(x)
+    duration = end - start
+    print_results(res, duration, settings.models_to_test[i])
+
+default_server.stop()

@@ -17,6 +17,10 @@ class Settings(BaseSettings):
         'paraphrase-multilingual-MiniLM-L12-v2',
         'distiluse-base-multilingual-cased-v1',
         'distiluse-base-multilingual-cased-v2',
+        'multi-qa-mpnet-base-cos-v1',
+        'multi-qa-mpnet-base-dot-v1',
+        'multi-qa-mpnet-base-dot-v1'
+
     ]
 
 
@@ -34,6 +38,8 @@ class Settings(BaseSettings):
         384,
         512,
         512,
+        768,
+        768
     ]
     TOKENIZATION_BATCH_SIZE: int = 1024  # Batch size for tokenizing operation
     INFERENCE_BATCH_SIZE: int = 8  # batch size for transformer

@@ -28,7 +28,7 @@ class SemanticHasher:
         index_params = {
             'metric_type': 'L2',
             'index_type': "IVF_FLAT",
-            'params': {"nlist": 2048, 'nprobe': 128}
+            'params': {"nlist": 1024, 'nprobe': 64}
         }
 
         fields = [
