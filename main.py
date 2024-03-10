@@ -40,7 +40,6 @@ async def lifespan(app: FastAPI):
     yield
     # Clean up the ML models and release the resources
     ml_resources.clear()
-    default_server.stop()
 
 
 # create fastapi instance
