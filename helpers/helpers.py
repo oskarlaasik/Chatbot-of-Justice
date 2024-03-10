@@ -1,7 +1,10 @@
+import csv
+
 from milvus import default_server
 from pymilvus import connections
-import csv
+
 from conf import settings
+
 
 def start_server():
     default_server.set_base_dir(settings.milvus_foldername)
@@ -12,6 +15,7 @@ def start_server():
     except Exception as e:
         default_server.start()
         connections.connect(host='127.0.0.1', port=default_server.listen_port)
+
 
 
 def generate_doc_map():

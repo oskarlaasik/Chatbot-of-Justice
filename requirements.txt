@@ -1,6 +1,6 @@
 torch>=2.2.1
 datasets>=2.17.1
-milvus>=2.3.8
+milvus>=2.3.5
 pymilvus>=2.3.6
 pydantic~=2.6.2
 sentence-transformers>=2.5.1
@@ -9,3 +9,4 @@ fastapi>=0.110.0
 uvicorn>=0.27.1
 pytest>=8.1.1
 httpx>=0.27.0
+nltk>=3.8.1
