@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # loend mudelitest, mille efektiivsust oleks vaja testida
+    # models to test when looking at stats
     models_to_test: list = [
         'all-mpnet-base-v2',
         'multi-qa-mpnet-base-dot-v1',
@@ -19,8 +19,7 @@ class Settings(BaseSettings):
         'distiluse-base-multilingual-cased-v2',
         'multi-qa-mpnet-base-cos-v1',
         'multi-qa-mpnet-base-dot-v1',
-        'multi-qa-mpnet-base-dot-v1'
-
+        'msmarco-bert-base-dot-v5'
     ]
 
 
@@ -39,11 +38,17 @@ class Settings(BaseSettings):
         512,
         512,
         768,
+        768,
         768
     ]
-    TOKENIZATION_BATCH_SIZE: int = 1024  # Batch size for tokenizing operation
-    INFERENCE_BATCH_SIZE: int = 8  # batch size for transformer
-    LIMIT: int = 5  # How many results to search for
+    tokenization_batch_size: int = 1024  # Batch size for tokenizing operation
+    pretrained_model_to_evaluate: str = 'all-mpnet-base-v2'  # When evaluating a single model
+    result_limit: int = 5  # How many results to search for when evaluating a model
+    inference_model: str = 'all-mpnet-base-v2'
+    inference_model_dim: int = 768
+    milvus_foldername: str = 'milvus_data'
+    question_dataset_path: str = 'data/question_data.csv'
+    justice_dataset_path: str = 'data/justice.csv'
 
 
 settings = Settings()
