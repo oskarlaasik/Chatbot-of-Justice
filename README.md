@@ -4,7 +4,7 @@ Chatbot of Justice is a python library to vectorize and retrieve supreme court d
 
 ## Usage
 
-This library can either be run locally or deployed as docker container. The library uses the supreme court dataset(https://www.kaggle.com/datasets/deepcontractor/supreme-court-judgment-prediction) and assumes it is in the data folder.
+The library uses the supreme court dataset(https://www.kaggle.com/datasets/deepcontractor/supreme-court-judgment-prediction) and assumes it is in the data folder: data/justice.csv.
 
 ## Running locally
 
