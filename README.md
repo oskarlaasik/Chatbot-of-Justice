@@ -45,11 +45,3 @@ go to /docs to use swagger and in the /chatbot_of_justice/process_question subse
 
 Please make sure you are running tests from the project root directory.
 
-### Running docker
-```bash
-docker build -t chatbot_of_justice . 
-```
-```bash
-docker run -d -p 8000:8000 chatbot_of_justice:latest
-```
-Then act as if you were running the FastAPI framework.
