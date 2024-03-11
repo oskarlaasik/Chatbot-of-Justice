@@ -39,7 +39,9 @@ python eval_single_model.py
 ```bash
 python main.py
 ```
-go to /docs to use swagger and in the /chatbot_of_justice/process_question subsection write your question to  into the corresponding field.
+By default library runs on port 8000. Be patient, starting the Milvus server takes a moment.
+
+go to http://localhost:8000/docs to use swagger and in the /chatbot_of_justice/process_question subsection write your question to  into the corresponding field.
 
 ### Running tests
 
